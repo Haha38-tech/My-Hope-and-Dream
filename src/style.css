@@ -1,0 +1,30 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0b0a10; overflow: hidden; }
+body { font-family: 'Press Start 2P', monospace; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+
+.logo {
+  position: fixed; top: 2.2vh; left: 0; right: 0; text-align: center; pointer-events: none;
+  font-size: clamp(14px, 3.4vw, 40px); letter-spacing: 0.06em; color: #fff;
+  text-shadow:
+    0 0.08em 0 #ff8f2e, 0 0.16em 0 #c0331f,
+    0.08em 0.24em 0 #1b1424, -0.08em 0.24em 0 #1b1424, 0 0.3em 0 #1b1424;
+}
+.hint {
+  position: fixed; bottom: 2.4vh; left: 0; right: 0; text-align: center; pointer-events: none;
+  font-size: clamp(8px, 1.1vw, 14px); color: #f3e2cf; text-shadow: 0 2px 0 #1b1424; opacity: 0.9;
+}
+.hint b { color: #ffd23f; font-weight: normal; }
+
+#banner {
+  position: fixed; top: 42%; left: 0; right: 0; text-align: center; pointer-events: none;
+  font-size: clamp(28px, 7vw, 90px); color: #ffd23f; opacity: 0;
+  text-shadow: 0 0.08em 0 #c0331f, 0 0.16em 0 #1b1424;
+}
+#banner.show { animation: bam 1.4s ease-out forwards; }
+@keyframes bam {
+  0% { opacity: 1; transform: scale(2.2) rotate(-8deg); }
+  15% { opacity: 1; transform: scale(1) rotate(-4deg); }
+  80% { opacity: 1; transform: scale(1) rotate(-4deg); }
+  100% { opacity: 0; transform: scale(0.9) rotate(-4deg); }
+}
