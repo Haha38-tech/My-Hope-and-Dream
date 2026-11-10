@@ -1,23 +1,53 @@
 import '@fontsource/press-start-2p/400.css';
 import './style.css';
-import { createGame, STEP } from './game/game.js';
+import { createGame, sanitizeConfig, STEP } from './game/game.js';
+import { CARS } from './game/cars.js';
 import { buildCarSprites } from './gfx/sprites.js';
 import { renderArenaTexture } from './gfx/arenaArt.js';
 import { drawCar, drawDebug } from './gfx/render.js';
+import { createEditor } from './editor.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const banner = document.getElementById('banner');
+const STORAGE_KEY = 'bey-v-golovu:config';
 
-const game = createGame();
-const arena = game.arena;
-const sprites = buildCarSprites(game.car.def);
-const arenaTex = renderArenaTexture(arena, { x0: -10, y0: -6, x1: arena.width + 10, y1: arena.height + 6 });
+let config = sanitizeConfig(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
+let game, sprites, arenaTex;
+const arenaTextures = new Map();
+
+function applyConfig(patch = {}) {
+  config = sanitizeConfig({ ...config, ...patch });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  game = createGame(config);
+  window.__game = game; // для отладки из консоли
+  sprites = buildCarSprites(config.carId, CARS[config.carId]);
+  if (!arenaTextures.has(config.arenaId)) {
+    const a = game.arena;
+    arenaTextures.set(config.arenaId, renderArenaTexture(a, { x0: -8, y0: -6, x1: a.width + 8, y1: a.height + 6 }));
+  }
+  arenaTex = arenaTextures.get(config.arenaId);
+  respawnAt = 0;
+  particles.length = 0;
+  banner.classList.remove('show');
+}
 
 // --- Управление: A — назад, D — вперёд (по коду клавиши, работает и в русской раскладке).
 const keys = new Set();
 let debug = new URLSearchParams(location.search).has('debug');
+let paused = false;
+
+const editor = createEditor(document.getElementById('editor'), {
+  getConfig: () => config,
+  onChange: (patch) => { applyConfig(patch); editor.refresh(); },
+  onToggle: (open) => { paused = open; keys.clear(); },
+});
+document.getElementById('open-editor').addEventListener('click', () => editor.toggle(true));
+
 addEventListener('keydown', (e) => {
+  if (e.code === 'KeyE') { editor.toggle(); return; }
+  if (e.code === 'Escape' && editor.open) { editor.toggle(false); return; }
+  if (paused) return;
   keys.add(e.code);
   if (e.code === 'KeyR') respawn();
   if (e.code === 'KeyB') debug = !debug;
@@ -38,6 +68,8 @@ function readInput() {
   if (keys.has('KeyD') || keys.has('ArrowRight')) v += 1;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) v -= 1;
   for (const t of touches.values()) v += t;
+  // Логотип и подсказка уходят с экрана с первым газом — не мешают ехать по потолку.
+  if (v) document.body.classList.add('playing');
   return Math.sign(v);
 }
 
@@ -58,7 +90,7 @@ function onHeadHit(at) {
   banner.classList.remove('show');
   void banner.offsetWidth; // перезапуск CSS-анимации
   banner.classList.add('show');
-  const colors = ['#fff6b8', '#ffd23f', '#ffffff', '#ff8f5e'];
+  const colors = ['#fff6b8', '#ffd23f', '#ffffff', '#5a9cff'];
   for (let i = 0; i < 18; i++) {
     const a = Math.random() * Math.PI * 2;
     const s = 3 + Math.random() * 5;
@@ -72,16 +104,18 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
-  acc += dt;
-  while (acc >= STEP) {
-    game.step(respawnAt ? 0 : readInput());
-    for (const ev of game.events.splice(0)) if (ev.type === 'headHit' && !respawnAt) onHeadHit(ev.at);
-    if (respawnAt && game.time >= respawnAt) respawn();
-    acc -= STEP;
+  if (!paused) {
+    acc += dt;
+    while (acc >= STEP) {
+      game.step(respawnAt ? 0 : readInput());
+      for (const ev of game.events.splice(0)) if (ev.type === 'headHit' && !respawnAt) onHeadHit(ev.at);
+      if (respawnAt && game.time >= respawnAt) respawn();
+      acc -= STEP;
+    }
+    for (const p of particles) { p.vy += 9 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+    for (let i = particles.length - 1; i >= 0; i--) if (particles[i].life <= 0) particles.splice(i, 1);
+    shake = Math.max(0, shake - dt);
   }
-  for (const p of particles) { p.vy += 20 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
-  for (let i = particles.length - 1; i >= 0; i--) if (particles[i].life <= 0) particles.splice(i, 1);
-  shake = Math.max(0, shake - dt);
   render();
   requestAnimationFrame(frame);
 }
@@ -93,7 +127,8 @@ function render() {
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   ctx.imageSmoothingEnabled = false;
 
-  // Вся арена целиком в кадре, как в оригинальном жанре.
+  // Вся арена целиком в кадре.
+  const { arena } = game;
   const ppm = Math.min(w / arena.width, h / arena.height);
   const sx = (Math.random() - 0.5) * shake * 0.6;
   const sy = (Math.random() - 0.5) * shake * 0.6;
@@ -112,5 +147,5 @@ function render() {
   if (debug) drawDebug(ctx, game.world);
 }
 
-window.__game = game; // для отладки из консоли
+applyConfig();
 requestAnimationFrame(frame);

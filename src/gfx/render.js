@@ -1,20 +1,20 @@
 import { ART_PPM } from './pixelart.js';
 
-function drawSprite(ctx, sprite, body, scale, facing = 1) {
+function drawSprite(ctx, sprite, body, scale = 1, facing = 1) {
   const p = body.getPosition();
   ctx.save();
   ctx.translate(p.x, p.y);
   ctx.rotate(body.getAngle());
-  ctx.scale((facing * 1) / ART_PPM, 1 / ART_PPM);
+  ctx.scale((facing * scale) / ART_PPM, scale / ART_PPM);
   ctx.drawImage(sprite.canvas, -sprite.ox, -sprite.oy);
   ctx.restore();
 }
 
 export function drawCar(ctx, car, sprites) {
   // Голова позади корпуса — шея прячется в кабине.
-  drawSprite(ctx, sprites.head, car.head, 1, car.facing);
-  drawSprite(ctx, sprites.body, car.chassis, 1, car.facing);
-  car.wheels.forEach((w, i) => drawSprite(ctx, sprites.wheels[i], w.body, 1, car.facing));
+  drawSprite(ctx, sprites.head, car.head, car.scale, car.facing);
+  drawSprite(ctx, sprites.body, car.chassis, car.scale, car.facing);
+  car.wheels.forEach((w, i) => drawSprite(ctx, sprites.wheels[i], w.body, car.scale, car.facing));
 }
 
 export function drawDebug(ctx, world) {

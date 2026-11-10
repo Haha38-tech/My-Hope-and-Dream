@@ -1,6 +1,6 @@
 // Мини-движок пиксель-арта: растеризует фигуры (в метрах) в маленький canvas,
 // добавляет блики сверху, тени снизу и тёмный контур — как у спрайтов в стиле аркад.
-export const ART_PPM = 20; // пикселей арта на метр
+export const ART_PPM = 24; // пикселей арта на метр
 
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 
@@ -28,7 +28,7 @@ function bounds(p) {
  * mask — красить только поверх уже закрашенного; flat — без бликов/теней.
  * Возвращает { canvas, ox, oy }: (ox, oy) — пиксель, где находится точка (0, 0).
  */
-export function rasterize(parts, { ppm = ART_PPM, pad = 2, outline = '#1b1424' } = {}) {
+export function rasterize(parts, { ppm = ART_PPM, pad = 2, outline = '#0c0b10' } = {}) {
   let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
   for (const p of parts) {
     const b = bounds(p);
@@ -57,6 +57,7 @@ export function rasterize(parts, { ppm = ART_PPM, pad = 2, outline = '#1b1424' }
   });
 
   const ramps = parts.map((p) => ({
+    hi: hex(p.ramp.hi ?? p.ramp.light ?? p.ramp.base),
     light: hex(p.ramp.light ?? p.ramp.base),
     base: hex(p.ramp.base),
     dark: hex(p.ramp.dark ?? p.ramp.base),
@@ -79,7 +80,8 @@ export function rasterize(parts, { ppm = ART_PPM, pad = 2, outline = '#1b1424' }
         const above = y > 0 ? idx[k - w] : -1;
         const below = y < h - 1 ? idx[k + w] : -1;
         const r = ramps[i];
-        put(k, parts[i].flat ? r.base : above !== i ? r.light : below !== i ? r.dark : r.base);
+        // Сверху — светлый блик в 1 пиксель, снизу — тень.
+        put(k, parts[i].flat ? r.base : above !== i ? r.hi : below !== i ? r.dark : r.base);
       } else {
         const near = (x > 0 && idx[k - 1] >= 0) || (x < w - 1 && idx[k + 1] >= 0)
           || (y > 0 && idx[k - w] >= 0) || (y < h - 1 && idx[k + w] >= 0);

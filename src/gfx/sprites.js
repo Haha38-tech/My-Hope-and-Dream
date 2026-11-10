@@ -1,43 +1,55 @@
 import { rasterize } from './pixelart.js';
+import { BLUE, NAVY } from '../game/cars.js';
 
-const TIRE = { light: '#4a4458', base: '#2c2836', dark: '#1d1a25' };
-const RIM = { light: '#e2e6f2', base: '#a7aec6', dark: '#666e8c' };
-const HUB = { base: '#3d4462' };
-const SKIN = { light: '#ffd9b3', base: '#f0b183', dark: '#c27c56' };
-const BANDANA = { light: '#7fe0ff', base: '#2d9be0', dark: '#1a5fa8' };
-const SHADES = { light: '#5d5a78', base: '#16131f', dark: '#16131f' };
-const SHINE = { base: '#ffffff' };
-const MOUTH = { base: '#7a2b2b' };
+const TIRE = { hi: '#4b4b5c', light: '#31313d', base: '#202029', dark: '#121218' };
+const SIDEWALL = { base: '#34343f' };
+const CHROME = { base: '#c9cfdf' };
+const DOT = { base: '#ffffff' };
+const VISOR = { hi: '#9d92ff', light: '#3b3c8f', base: '#1b1e4d', dark: '#0f1131' };
+const SHINE = { base: '#d6caff' };
 
-function wheelParts(r) {
-  const bolts = [0, 1, 2].map((i) => {
-    const a = (i / 3) * Math.PI * 2;
-    return { circle: [Math.cos(a) * r * 0.32, Math.sin(a) * r * 0.32], r: r * 0.12, ramp: HUB, flat: true, mask: true };
-  });
-  return [
-    { circle: [0, 0], r, ramp: TIRE },
-    { circle: [0, 0], r: r * 0.58, ramp: RIM },
-    ...bolts,
-  ];
+// Колесо: чёрная шина, тёмная боковина, синий диск с болтами (видно вращение).
+function wheelParts(r, tread) {
+  const parts = [{ circle: [0, 0], r, ramp: TIRE }];
+  if (tread) {
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      parts.push({ circle: [Math.cos(a) * r * 0.96, Math.sin(a) * r * 0.96], r: r * 0.13, ramp: TIRE, flat: true });
+    }
+  }
+  parts.push(
+    { circle: [0, 0], r: r * 0.74, ramp: SIDEWALL, flat: true, mask: true },
+    { circle: [0, 0], r: r * 0.52, ramp: BLUE },
+    { circle: [0, 0], r: r * 0.2, ramp: NAVY, flat: true, mask: true },
+    { circle: [0, 0], r: r * 0.08, ramp: DOT, flat: true, mask: true },
+  );
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4;
+    parts.push({ circle: [Math.cos(a) * r * 0.36, Math.sin(a) * r * 0.36], r: r * 0.07, ramp: CHROME, flat: true, mask: true });
+  }
+  return parts;
 }
 
+// Голова — синий шлем с тёмным визором и бликом.
 function headParts(r) {
   return [
-    // Хвостики банданы сзади.
-    { poly: [[-0.75 * r, -0.45 * r], [-1.6 * r, -0.2 * r], [-1.45 * r, 0.15 * r], [-0.85 * r, -0.05 * r]], ramp: BANDANA },
-    { circle: [0, 0], r, ramp: SKIN },
-    { poly: [[-r, -r], [r, -r], [r, -0.2 * r], [-r, -0.05 * r]], ramp: BANDANA, mask: true },
-    { poly: [[0.05 * r, 0.02 * r], [r, 0.02 * r], [r, 0.32 * r], [0.12 * r, 0.32 * r]], ramp: SHADES, mask: true },
-    { poly: [[0.62 * r, 0.06 * r], [0.78 * r, 0.06 * r], [0.78 * r, 0.16 * r], [0.62 * r, 0.16 * r]], ramp: SHINE, flat: true, mask: true },
-    { poly: [[0.38 * r, 0.56 * r], [0.85 * r, 0.5 * r], [0.85 * r, 0.62 * r], [0.42 * r, 0.66 * r]], ramp: MOUTH, flat: true, mask: true },
+    { circle: [0, 0], r, ramp: BLUE },
+    { poly: [[0.08 * r, -0.4 * r], [1.1 * r, -0.4 * r], [1.1 * r, 0.32 * r], [0.24 * r, 0.32 * r]], ramp: VISOR, mask: true },
+    { poly: [[0.52 * r, -0.3 * r], [0.84 * r, -0.3 * r], [0.84 * r, -0.14 * r], [0.52 * r, -0.14 * r]], ramp: SHINE, flat: true, mask: true },
+    { circle: [-0.38 * r, -0.52 * r], r: 0.15 * r, ramp: DOT, flat: true, mask: true },
   ];
 }
 
-// Собирает спрайты для описания машины из cars.js.
-export function buildCarSprites(def) {
-  return {
-    body: rasterize(def.art.body),
-    wheels: def.wheels.map((w) => rasterize(wheelParts(w.r))),
-    head: rasterize(headParts(def.head.r)),
-  };
+const cache = new Map();
+
+// Спрайты рисуются для машины масштаба 1 и уменьшаются при отрисовке.
+export function buildCarSprites(id, def) {
+  if (!cache.has(id)) {
+    cache.set(id, {
+      body: rasterize(def.art.body),
+      wheels: def.wheels.map((w) => rasterize(wheelParts(w.r, def.art.tread))),
+      head: rasterize(headParts(def.head.r)),
+    });
+  }
+  return cache.get(id);
 }

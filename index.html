@@ -3,13 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-    <title>Бей в голову</title>
+    <title>Бей в голову!</title>
   </head>
   <body>
     <canvas id="game"></canvas>
-    <div class="logo">БЕЙ В ГОЛОВУ!</div>
-    <div class="hint"><b>A</b> — назад · <b>D</b> — вперёд · <b>R</b> — заново</div>
+    <div class="logo"><span class="l1">БЕЙ В</span><span class="l2">ГОЛОВУ!</span></div>
+    <button id="open-editor" class="round gear" type="button" aria-label="Редактор (E)">⚙</button>
+    <div class="hint"><b>A</b> — назад · <b>D</b> — вперёд · <b>R</b> — заново · <b>E</b> — редактор</div>
     <div id="banner">БАЦ!</div>
+    <div id="editor"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
